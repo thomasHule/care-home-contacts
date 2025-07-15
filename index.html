@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Care Home Directory</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+      body { background: linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%); }
+      .glass {
+        background: rgba(255,255,255,0.85);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+        backdrop-filter: blur(6px);
+        border-radius: 1.5rem;
+      }
+      .fade-in {
+        animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: none; }
+      }
+      .sticky-header th { position: sticky; top: 0; background: #f3f4f6; z-index: 2; }
+      .filter-pill {
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.75rem;
+        border: 1.5px solid #d1d5db;
+        background: #fff;
+        color: #374151;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-right: 0.4rem;
+        margin-bottom: 0.4rem;
+        box-shadow: 0 1px 2px 0 rgba(31, 38, 135, 0.04);
+        outline: none;
+        min-width: 120px;
+        text-align: left;
+      }
+      .filter-pill-active {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+        box-shadow: 0 2px 8px 0 rgba(37, 99, 235, 0.10);
+      }
+      .pagination-btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div class="w-full min-h-screen flex flex-col items-center justify-start">
+      <!-- Header -->
+      <header class="w-full py-8 bg-gradient-to-r from-blue-500 to-teal-400 shadow-lg mb-10">
+        <div class="container mx-auto flex flex-col items-center">
+          <div class="flex items-center gap-4 mb-1">
+            <span class="text-4xl text-white"><i class="fa-solid fa-hands-holding-heart"></i></span>
+            <h1 class="text-4xl font-extrabold text-white tracking-tight drop-shadow-lg">Care Home Directory</h1>
+          </div>
+        </div>
+      </header>
+      <main class="container mx-auto flex-1 w-full max-w-7xl px-2 md:px-0" x-data="careHomeTable()">
+        <!-- Filters -->
+        <div class="glass p-8 mb-8 flex flex-wrap gap-8 items-center justify-between shadow-xl fade-in">
+          <div class="flex flex-col gap-2 min-w-[180px]">
+            <label class="block text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-location-dot text-blue-500"></i> Area</label>
+            <div class="relative">
+              <select x-model="filters.area" class="block w-full rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-400 px-4 py-2 pr-8 appearance-none">
+                <option value="">All</option>
+                <template x-for="area in areas" :key="area">
+                  <option x-text="area"></option>
+                </template>
+              </select>
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <template x-if="filters.area">
+              <span class="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Filter applied</span>
+            </template>
+          </div>
+          <div class="flex flex-col gap-2 min-w-[220px]">
+            <label class="block text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-filter text-blue-500"></i> Has</label>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" @click="filters.has.website = !filters.has.website" :class="filters.has.website ? 'filter-pill filter-pill-active ring-2 ring-blue-400' : 'filter-pill'">
+                <i class="fa-solid fa-globe"></i> Website
+                <template x-if="filters.has.website"><i class="fa-solid fa-check ml-1"></i></template>
+              </button>
+              <button type="button" @click="filters.has.phone = !filters.has.phone" :class="filters.has.phone ? 'filter-pill filter-pill-active ring-2 ring-blue-400' : 'filter-pill'">
+                <i class="fa-solid fa-phone"></i> Phone
+                <template x-if="filters.has.phone"><i class="fa-solid fa-check ml-1"></i></template>
+              </button>
+              <button type="button" @click="filters.has.email = !filters.has.email" :class="filters.has.email ? 'filter-pill filter-pill-active ring-2 ring-blue-400' : 'filter-pill'">
+                <i class="fa-solid fa-envelope"></i> Email
+                <template x-if="filters.has.email"><i class="fa-solid fa-check ml-1"></i></template>
+              </button>
+              <button type="button" @click="filters.has.socials = !filters.has.socials" :class="filters.has.socials ? 'filter-pill filter-pill-active ring-2 ring-blue-400' : 'filter-pill'">
+                <i class="fa-brands fa-facebook-messenger"></i> Socials
+                <template x-if="filters.has.socials"><i class="fa-solid fa-check ml-1"></i></template>
+              </button>
+            </div>
+            <template x-if="filters.has.website || filters.has.phone || filters.has.email || filters.has.socials">
+              <span class="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Filter applied</span>
+            </template>
+          </div>
+          <div class="flex flex-col gap-2 min-w-[220px]" x-data="{ open: false }">
+            <label class="block text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-hands-holding-medical text-blue-500"></i> Care Types</label>
+            <div class="relative">
+              <button type="button" @click="careTypesDropdownOpen = !careTypesDropdownOpen" class="w-full flex items-center justify-between px-4 py-2 rounded-full border border-gray-300 bg-white shadow-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 transition-all">
+                <span>
+                  <template x-if="filters.careTypes.length">
+                    <span>
+                        <span x-text="`${filters.careTypes.length} filter(s) applied`"></span>
+                    </span>
+                  </template>
+                  <template x-if="!filters.careTypes.length">
+                    <span>Select care types...</span>
+                  </template>
+                </span>
+                <i :class="careTypesDropdownOpen ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="ml-2 text-gray-400"></i>
+              </button>
+              <div x-show="careTypesDropdownOpen" @click.away="careTypesDropdownOpen = false" class="absolute left-0 mt-2 w-full min-w-[180px] bg-white border border-gray-200 rounded-xl shadow-2xl p-2 flex flex-col gap-2 animate-fade-in" style="display: block; max-height: 260px; overflow-y: auto; z-index: 999;">
+                <template x-for="type in careTypes" :key="type">
+                  <button type="button"
+                    @click="
+                      filters.careTypes = filters.careTypes.includes(type)
+                        ? filters.careTypes.filter(t => t !== type)
+                        : [...filters.careTypes, type]
+                    "
+                    :class="filters.careTypes.includes(type) ? 'filter-pill filter-pill-active ring-2 ring-blue-400' : 'filter-pill'"
+                    style="width: 100%; min-width: 0;"
+                  >
+                    <span x-text="type" class="truncate"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+            <template x-if="filters.careTypes.length">
+              <span class="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Filter applied</span>
+            </template>
+          </div>
+          <button @click="resetFilters" class="bg-gray-200 hover:bg-blue-200 text-blue-700 px-6 py-2 rounded-full font-semibold shadow transition-all duration-200 flex items-center gap-2 border border-gray-300 mt-4 md:mt-0">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </button>
+        </div>
+        <!-- Table Card -->
+        <div class="glass overflow-x-auto rounded-3xl shadow-2xl fade-in relative"
+          :style="careTypesDropdownOpen ? 'z-index: -99;' : ''">
+        <div class="flex flex-wrap items-end justify-between gap-4 p-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Show</label>
+            <select x-model.number="pageSize" class="block w-20 rounded border-gray-300 shadow-sm">
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+          <div class="flex-1 text-right">
+            <template x-if="filteredData.length > 0">
+              <span x-text="
+                `Showing ${Math.min(filteredData.length, (currentPage - 1) * pageSize + 1)}-
+                ${Math.min(filteredData.length, currentPage * pageSize)} of ${filteredData.length}`
+              "></span>
+            </template>
+          </div>
+        </div>
+        <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+          <span class="text-3xl text-blue-400 animate-spin"><i class="fa-solid fa-spinner"></i></span>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-100 sticky-header">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Area</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Name</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Website</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Phone</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Email</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Socials</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Care Types</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 tracking-wide">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(row, idx) in pagedData" :key="row.url ? row.url + '-' + idx : idx">
+              <tr class="hover:bg-blue-50 transition-colors duration-150 fade-in">
+                <td class="px-3 py-2 whitespace-nowrap" x-text="row.area"></td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <a :href="row.url" class="text-blue-600 hover:underline font-semibold" target="_blank" x-text="row.name || 'View'" :title="row.name"></a>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <template x-if="row.website">
+                    <a :href="row.website" class="text-blue-600 hover:underline flex items-center gap-1" target="_blank"><i class="fa-solid fa-globe"></i> Website</a>
+                  </template>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <template x-if="row.phone">
+                    <a :href="'tel:' + row.phone.replace(/[^\d+]/g, '')" class="text-blue-600 hover:underline flex items-center gap-1" x-text="row.phone"></a>
+                  </template>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <template x-if="row.email">
+                    <a :href="'mailto:' + row.email" class="text-blue-600 hover:underline flex items-center gap-1" x-text="row.email"></a>
+                  </template>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <template x-if="row.socials">
+                    <div class="flex flex-col gap-1">
+                      <template x-for="link in row.socials.split(';')" :key="link">
+                        <a :href="link" class="text-blue-600 hover:underline flex items-center gap-1" target="_blank" x-text="getSocialName(link)"></a>
+                      </template>
+                    </div>
+                  </template>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <div x-data="{ open: false }" class="relative">
+                    <button @click="open = !open" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold shadow-sm hover:bg-blue-200 transition-all duration-150 flex items-center gap-1">
+                      <i class="fa-solid fa-layer-group"></i>
+                      <span>View</span>
+                      <i :class="open ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"></i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="absolute left-0 mt-2 z-20 min-w-[120px] bg-white border border-gray-200 rounded-lg shadow-lg p-2 flex flex-col gap-1 animate-fade-in" style="display: none;">
+                      <template x-if="(row.careTypes || '').split(';').filter(Boolean).length">
+                        <template x-for="(type, tIdx) in (row.careTypes ? row.careTypes.split(';').filter(Boolean) : [])" :key="type + '-' + tIdx">
+                          <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm mb-1" x-text="type"></span>
+                        </template>
+                      </template>
+                      <template x-if="!(row.careTypes || '').split(';').filter(Boolean).length">
+                        <span class="text-xs text-gray-400">None</span>
+                      </template>
+                    </div>
+                  </div>
+                </td>
+    <style>
+      .animate-fade-in {
+        animation: fadeIn 0.3s cubic-bezier(.4,0,.2,1);
+      }
+    </style>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <a :href="row.url" class="text-blue-600 hover:underline flex items-center gap-1" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Details</a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="flex items-center justify-between p-4 text-sm text-gray-600">
+          <template x-if="filteredData.length === 0">
+            <span class="flex items-center gap-2 text-red-400"><i class="fa-solid fa-circle-exclamation"></i> No results found.</span>
+          </template>
+          <template x-if="filteredData.length > 0">
+            <span x-text="
+              filters.area || filters.has.website || filters.has.phone || filters.has.email || filters.has.socials || filters.careType
+                ? `${filteredData.length} result${filteredData.length === 1 ? '' : 's'} of ${data.length}`
+                : `${data.length} result${data.length === 1 ? '' : 's'}`
+            "></span>
+          </template>
+        </div>
+        <div class="flex justify-center items-center gap-2 pb-4" x-show="filteredData.length > 0">
+          <button class="pagination-btn px-3 py-1 rounded-full bg-gray-200 hover:bg-blue-200 font-semibold transition-all duration-150" :disabled="currentPage === 1" @click="currentPage = 1">&laquo; First</button>
+          <button class="pagination-btn px-3 py-1 rounded-full bg-gray-200 hover:bg-blue-200 font-semibold transition-all duration-150" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">&lsaquo; Prev</button>
+          <span class="mx-2">Page <span class="font-bold text-blue-600" x-text="currentPage"></span> of <span class="font-bold text-blue-600" x-text="totalPages"></span></span>
+          <button class="pagination-btn px-3 py-1 rounded-full bg-gray-200 hover:bg-blue-200 font-semibold transition-all duration-150" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">Next &rsaquo;</button>
+          <button class="pagination-btn px-3 py-1 rounded-full bg-gray-200 hover:bg-blue-200 font-semibold transition-all duration-150" :disabled="currentPage === totalPages" @click="currentPage = totalPages">Last &raquo;</button>
+        </div>
+
+      </div>
+    </div>
+    <script>
+      // CSV parsing utility (simple, for this file)
+      function parseCSV(csv, delimiter = ",") {
+        const lines = csv.split(/\r?\n/).filter(Boolean);
+        const headers = lines[0].split(delimiter).map((h) => h.trim());
+        return lines.slice(1).map((line) => {
+          // Handle quoted fields and commas inside quotes
+          const values = [];
+          let val = "",
+            inQuotes = false;
+          for (let i = 0, c; i < line.length; ++i) {
+            c = line[i];
+            if (c === '"') inQuotes = !inQuotes;
+            else if (c === delimiter && !inQuotes) {
+              values.push(val);
+              val = "";
+            } else val += c;
+          }
+          values.push(val);
+          const obj = {};
+          headers.forEach(
+            (h, i) => (obj[h] = (values[i] || "").replace(/^"|"$/g, ""))
+          );
+          return obj;
+        });
+      }
+
+      function careHomeTable() {
+        return {
+          careTypesDropdownOpen: false,
+          data: [],
+          filters: {
+            area: "",
+            has: { website: false, phone: false, email: false, socials: false },
+            careTypes: [],
+          },
+          areas: [],
+          careTypes: [],
+          pageSize: 25,
+          currentPage: 1,
+          loading: true,
+          get totalPages() {
+            return Math.max(1, Math.ceil(this.filteredData.length / this.pageSize));
+          },
+          get pagedData() {
+            const start = (this.currentPage - 1) * this.pageSize;
+            return this.filteredData.slice(start, start + this.pageSize);
+          },
+          resetFilters() {
+            this.filters = {
+              area: "",
+              has: {
+                website: false,
+                phone: false,
+                email: false,
+                socials: false,
+              },
+              careTypes: [],
+            };
+            this.currentPage = 1;
+          },
+          get filteredData() {
+            return this.data.filter((row) => {
+              if (this.filters.area && row.area !== this.filters.area)
+                return false;
+              if (this.filters.has.website && !row.website) return false;
+              if (this.filters.has.phone && !row.phone) return false;
+              if (this.filters.has.email && !row.email) return false;
+              if (this.filters.has.socials && !row.socials) return false;
+              if (
+                this.filters.careTypes.length &&
+                !this.filters.careTypes.every(type => (row.careTypes || "").split(";").includes(type))
+              )
+                return false;
+              return true;
+            });
+          },
+          getSocialName(link) {
+            if (link.includes("facebook.com")) return "Facebook";
+            if (link.includes("twitter.com")) return "Twitter";
+            if (link.includes("instagram.com")) return "Instagram";
+            return "Social";
+          },
+          async init() {
+            this.loading = true;
+            const res = await fetch("./care-home-details.csv");
+            const text = await res.text();
+            this.data = parseCSV(text);
+            this.areas = Array.from(
+              new Set(this.data.map((d) => d.area).filter(Boolean))
+            ).sort();
+            this.careTypes = Array.from(
+              new Set(
+                this.data
+                  .flatMap((d) =>
+                    (d.careTypes || "").split(";").map((s) => s.trim())
+                  )
+                  .filter(Boolean)
+              )
+            ).sort();
+            this.currentPage = 1;
+            setTimeout(() => { this.loading = false; }, 500);
+          },
+          $watch: {
+            pageSize(value) {
+              this.currentPage = 1;
+            },
+            filteredData() {
+              this.currentPage = 1;
+            }
+          }
+        };
+      }
+    </script>
+  </body>
+</html>
