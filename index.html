@@ -144,6 +144,14 @@
             <i class="fa-solid fa-rotate-left"></i> Reset
           </button>
         </div>
+        <div class="w-full flex justify-end mb-2">
+          <button @click="downloadCSV(false)" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full font-semibold shadow transition-all duration-200 flex items-center gap-2 mr-2">
+            <i class="fa-solid fa-download"></i> Download All
+          </button>
+          <button @click="downloadCSV(true)" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full font-semibold shadow transition-all duration-200 flex items-center gap-2">
+            <i class="fa-solid fa-filter"></i> Download Filtered
+          </button>
+        </div>
         <!-- Table Card -->
         <div class="glass overflow-x-auto rounded-3xl shadow-2xl fade-in relative"
           :style="careTypesDropdownOpen ? 'z-index: -99;' : ''">
@@ -348,6 +356,36 @@
             if (link.includes("twitter.com")) return "Twitter";
             if (link.includes("instagram.com")) return "Instagram";
             return "Social";
+          },
+          downloadCSV(filteredOnly) {
+            // Get the data to export
+            const exportData = filteredOnly ? this.filteredData : this.data;
+            if (!exportData.length) return;
+            // Get headers from the first row
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [headers.join(",")];
+            for (const row of exportData) {
+              csvRows.push(headers.map(h => {
+                const val = row[h] || "";
+                // Escape quotes
+                if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
+                  return '"' + val.replace(/"/g, '""') + '"';
+                }
+                return val;
+              }).join(","));
+            }
+            const csvContent = csvRows.join("\r\n");
+            const blob = new Blob([csvContent], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filteredOnly ? 'care-home-details-filtered.csv' : 'care-home-details.csv';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 100);
           },
           async init() {
             this.loading = true;
